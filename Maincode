@@ -1,0 +1,178 @@
+
+from tkinter import *
+from random import choice,random,randint
+
+##################################################################################
+TITRE = "Incendie"
+
+# Marge autour du Caneva
+MARGE = 20
+
+# Largeur d'une Cellule
+COTE = 7
+
+# Dimensions de la grille
+NB_LIG = 80
+NB_COL = 120
+
+# Dimensions du Canevas
+LARGEUR = 2*MARGE + NB_COL*COTE
+HAUTEUR = 2*MARGE + NB_LIG*COTE
+
+# Directions de propagation du feu (4 cases voisines)
+DIRECTIONS = [(0,1),(0,-1),(1,0),(-1,0)]
+
+VERTS = ["ForestGreen","Green","DarkGreen","LimeGreen"]
+FEU = ["Yellow","Gold","Orange","Red","OrangeRed","FireBrick","Coral","Sienna","Tomato"]
+CENDRE = ["Gray","DimGray","SlateGray","DarkGray","LightGray","GainsBoro"]
+
+##################################################################################
+
+def initialiser():
+
+   # Remplacer 'pass' par votre code d'initialisation qui sera excut
+   # une seule fois  appui sur le bouton "Commencer".
+   
+   # Ajouter une commande 'global' comme ci-dessous pour dclarer les variables
+   # que vous voulez utiliser dans plus d'une fonction.
+   
+   global feux
+
+   xlig = randint(0,NB_LIG)
+   ycol = randint(0,NB_COL)
+
+#   lig = (event.y - MARGE)//COTE
+#   col = (event.x - MARGE)//COTE
+
+   pixel(xlig,ycol,"Red")
+
+   feux[ycol][xlig] = 1
+
+def unTour():
+
+   # Remplacer 'pass' par votre code de simulation d'un tour qui sera execute
+   # toutes les 500 ms jusqu' l'appui sur le boutton "Quitter".
+   
+   # Ajouter une commande 'global' comme ci-dessous pour dclarer les variables
+   # que vous voulez utiliser dans plus d'une fonction.
+   
+   global feux, FEU
+
+   new_feux = []
+
+   for _ in range(NB_COL):
+      new_feux.append([0 for _ in range(NB_LIG)])
+
+   new_feux = feux.copy()
+
+   for ligne in range(NB_LIG):
+      for colonne in range(NB_COL):
+         if (feux[colonne][ligne] == 1):
+            for (voisinx, voisiny) in get_neighbors(ligne,colonne):
+                if ((feux[voisiny][voisinx] == 0) and (randint(0,11)>5)):
+                   new_feux[voisiny][voisinx] = 1
+                   pixel(voisinx,voisiny,FEU[randint(0,len(FEU)-1)])
+                elif  feux[voisiny][voisinx] == 3 and (randint(0,20)>1):
+                   new_feux[voisiny][voisinx] = 1
+                   pixel(voisinx,voisiny,FEU[randint(0,len(FEU)-1)])
+                elif feux[voisiny][voisinx] == 2:
+                   new_feux[voisiny][voisinx] = 2
+                elif feux[voisiny][voisinx] == 1:
+                   new_feux[voisiny][voisinx] = 3
+                   pixel(voisinx,voisiny,CENDRE[randint(0,len(CENDRE)-1)])
+
+   feux = new_feux.copy()
+
+   application.after(500,unTour)
+
+
+def interdire(event):
+
+   # Ajouter une commande 'global' comme ci-dessous pour  les variables
+   # que vous voulez utiliser dans plus d'une fonction.
+  
+   global feux  
+
+   lig = (event.y - MARGE)//COTE
+   col = (event.x - MARGE)//COTE
+
+   feux[col][lig] = 2
+   pixel(lig,col,"Blue")
+
+
+def get_neighbors(x, y):
+    return [
+            (x, y + 1 if y < NB_COL-1 else y),
+            (x, y - 1 if y > 0 else y),
+            (x + 1 if x < NB_LIG-1 else x, y),
+            (x - 1 if x > 0 else x, y)
+           ]
+
+
+
+##########################################################################
+### Ne pas modifier sous se texte mais lire les commentaires
+##########################################################################
+# Appeler cette fonction a tout moment pour colorier une cellule de 
+# coordonnes (lig,col)
+
+def pixel(lig,col,couleur):
+   item = rectangles[lig][col]
+   zoneDessin.itemconfig(item,fill=couleur)
+
+
+def rectangle(lig,col):
+   x = MARGE + col*COTE
+   y = MARGE + lig*COTE
+   return zoneDessin.create_rectangle(x,y,x+COTE,y+COTE,fill=VERTS[randint(0,len(VERTS)-1)])
+
+bas = False
+go = False
+
+def clicGauche(event):
+   global bas, feux
+   if go: return
+   bas = not bas
+   interdire(event)
+  
+   
+def deplacement(event):
+   global bas, feux
+   if go or not bas: return
+   interdire(event)
+
+def executer():
+   global go, feux
+   go = True
+   initialiser()
+   application.after(500,unTour)
+
+##################################################################################
+# the main loop of the appli
+
+
+application = Tk()
+application.title(TITRE)
+
+zoneDessin = Canvas(application,width=LARGEUR,height=HAUTEUR)
+zoneDessin.pack(side=TOP)
+
+rectangles = [[rectangle(lig,col) for col in range(NB_COL)] for lig in range(NB_LIG)]
+
+feux = []
+
+for _ in range(NB_COL):
+   feux.append([0 for _ in range(NB_LIG)])
+
+zoneDessin.bind("<Button-1>",clicGauche)
+zoneDessin.bind("<Motion>",deplacement)
+zoneDessin.bind("<ButtonRelease-1>",clicGauche)
+
+btnGo = Button(application,text="Commencer",command=executer)
+btnGo.pack(side=LEFT)
+
+btnQuitter = Button(application,text="Quitter",command=application.destroy)
+btnQuitter.pack(side=RIGHT)
+
+
+application.mainloop()
